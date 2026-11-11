@@ -1,0 +1,4 @@
+{
+  "denyRead": [".env"],
+  "denyWrite": [".env", ".git/", "agent.mjs", "policy.json", "box.sh"]
+}

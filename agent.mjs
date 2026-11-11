@@ -1,33 +1,65 @@
-// A whole agent harness in one file: a model, one tool, and a loop.
-// Usage: ANTHROPIC_API_KEY=... node agent.mjs "make the tests pass"
+// An agent harness with a lock on it: four narrow tools instead of a shell,
+// and a policy that is checked before any of them touches a file.
+// Usage: ANTHROPIC_API_KEY=... ./box.sh "make the tests pass"
 import { execSync } from 'node:child_process';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { isAbsolute, relative, resolve } from 'node:path';
 
 const MODEL = 'claude-opus-5-5';
 const MAX_TURNS = 20;
+const policy = JSON.parse(readFileSync('policy.json', 'utf8'));
 
-// The only tool the model gets: run a shell command in this folder.
-const tools = [{
-  name: 'shell',
-  description: 'Run a shell command in the project folder and return its output.',
-  input_schema: {
-    type: 'object',
-    properties: { command: { type: 'string', description: 'The command to run' } },
-    required: ['command'],
+const path = { type: 'string', description: 'A path inside the project folder' };
+const tool = (name, description, properties = {}) => ({
+  name,
+  description,
+  input_schema: { type: 'object', properties, required: Object.keys(properties) },
+});
+const tools = [
+  tool('list_files', 'List the files in the project folder.'),
+  tool('read_file', 'Read one file.', { path }),
+  tool('write_file', 'Create or replace one file.', { path, content: { type: 'string' } }),
+  tool('run_tests', 'Run the test suite (npm test) and return its output.'),
+];
+
+// The lock. It throws when a path is outside the project or on a deny list.
+function allowed(file, denied) {
+  const inside = relative('.', resolve(file));
+  if (inside.startsWith('..') || isAbsolute(inside)) throw new Error('outside the project');
+  const matches = (rule) => inside === rule || (rule.endsWith('/') && inside.startsWith(rule));
+  const hit = denied.find(matches);
+  if (hit) throw new Error(`denied by policy.json (${hit})`);
+  return inside;
+}
+
+const run = {
+  list_files: () => readdirSync('.', { recursive: true })
+    .filter((name) => !name.startsWith('.git/') && name !== '.git').join('\n'),
+  read_file: ({ path: file }) => readFileSync(allowed(file, policy.denyRead), 'utf8'),
+  write_file: ({ path: file, content }) => {
+    writeFileSync(allowed(file, policy.denyWrite), content);
+    return 'written';
   },
-}];
+  run_tests: () => {
+    try {
+      return execSync('npm test 2>&1', { encoding: 'utf8', timeout: 60_000 }).slice(-4000);
+    } catch (error) {
+      return `${error.stdout ?? ''}`.slice(-4000);
+    }
+  },
+};
 
-// The model never runs anything. It asks; this function does the work.
-function runTool(input) {
-  console.log(`\n$ ${input.command}`);
-  let output;
+// The model never runs anything. It asks; the harness checks, then does the work.
+function runTool({ id, name, input }) {
+  const call = `${name}(${input.path ?? ''})`;
   try {
-    output = execSync(input.command, { encoding: 'utf8', timeout: 60_000, stdio: 'pipe' });
+    const content = run[name](input) || '(no output)';
+    console.log(`  ok      ${call}`);
+    return { type: 'tool_result', tool_use_id: id, content };
   } catch (error) {
-    output = `${error.stdout ?? ''}${error.stderr ?? ''}\nexit code: ${error.status}`;
+    console.log(`  REFUSED ${call}: ${error.message}`);
+    return { type: 'tool_result', tool_use_id: id, content: error.message, is_error: true };
   }
-  if (output.length > 8000) output = `${output.slice(0, 8000)}\n[cut: ${output.length} characters in total]`;
-  console.log(output.trimEnd());
-  return output || '(no output)';
 }
 
 async function callModel(messages) {
@@ -43,7 +75,8 @@ async function callModel(messages) {
       model: MODEL,
       max_tokens: 16000,
       fallbacks: 'default',
-      system: 'You are a coding agent working in a project folder. Use the shell tool to read, edit and test files. Stop when the task is done.',
+      system: 'You are a coding agent working in a project folder. Use the tools to read, '
+        + 'edit and test files. A refused tool call is final: do not try a way around it.',
       tools,
       messages,
     }),
@@ -53,27 +86,15 @@ async function callModel(messages) {
 }
 
 const messages = [{ role: 'user', content: process.argv[2] ?? 'make the tests pass' }];
-const used = { input: 0, output: 0 };
 
 for (let turn = 1; turn <= MAX_TURNS; turn += 1) {
   const reply = await callModel(messages);
-  used.input += reply.usage.input_tokens;
-  used.output += reply.usage.output_tokens;
-  if (turn === 1) console.log(`first request: ${reply.usage.input_tokens} input tokens`);
-
-  // Keep everything the model said, so the next request carries the history.
   messages.push({ role: 'assistant', content: reply.content });
   for (const block of reply.content) if (block.type === 'text') console.log(`\n${block.text}`);
-
-  // No tool call means the model thinks it is done (or it stopped for another reason).
   if (reply.stop_reason !== 'tool_use') {
-    console.log(`\nstopped: ${reply.stop_reason} after ${turn} requests, ${used.input} input and ${used.output} output tokens`);
+    console.log(`\nstopped: ${reply.stop_reason} after ${turn} requests`);
     break;
   }
-
-  // Run every tool call and send all the results back in one message.
-  const results = reply.content
-    .filter((block) => block.type === 'tool_use')
-    .map((block) => ({ type: 'tool_result', tool_use_id: block.id, content: runTool(block.input) }));
-  messages.push({ role: 'user', content: results });
+  const calls = reply.content.filter((block) => block.type === 'tool_use');
+  messages.push({ role: 'user', content: calls.map(runTool) });
 }
