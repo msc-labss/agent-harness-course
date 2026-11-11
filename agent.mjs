@@ -1,5 +1,6 @@
 // An agent harness with a lock on it: four narrow tools instead of a shell,
 // and a policy that is checked before any of them touches a file.
+// It holds no API key: every request goes through the gate (gate.mjs).
 // Usage: ANTHROPIC_API_KEY=... ./box.sh "make the tests pass"
 import { execSync } from 'node:child_process';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -7,6 +8,7 @@ import { isAbsolute, relative, resolve } from 'node:path';
 
 const MODEL = 'claude-opus-5-5';
 const MAX_TURNS = 20;
+const GATE = process.env.GATE_URL ?? 'http://gate:8080';
 const policy = JSON.parse(readFileSync('policy.json', 'utf8'));
 
 const path = { type: 'string', description: 'A path inside the project folder' };
@@ -63,11 +65,10 @@ function runTool({ id, name, input }) {
 }
 
 async function callModel(messages) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(`${GATE}/v1/messages`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2026-10-21',
       'anthropic-beta': 'server-side-fallback-2026-07-01',
     },

@@ -18,7 +18,12 @@ it alone.
 - `policy.json` (from `ep2`): the files the agent may not read and may not write.
 - `src/slugify.js` and `test/`: a tiny project with a bug. `npm test` shows 1 test passing
   and 2 failing. It is the agent's job to fix it.
-- `box.sh`: runs the agent inside a Docker container that can see only this folder.
+- `box.sh`: runs the agent inside a Docker container. Up to `ep2` the container sees this
+  whole folder, holds the API key and has open internet. From `ep3` it mounts only the files
+  the agent needs (most of them read-only), holds no key, and sits on a network with no way
+  out except the gate. `./box.sh --test` runs `npm test` in the same box, without the agent.
+- `gate.mjs` (from `ep3`): the only way out of the box. It holds the API key and forwards one
+  request, `POST /v1/messages`, to the Claude API. Everything else gets a 403.
 
 ## Run it
 
@@ -37,9 +42,10 @@ price. An agent works differently on every run; yours will not match line for li
 **Do not run `node agent.mjs` directly on your machine.** At `ep1` the agent runs any shell
 command the model asks for, with your permissions, and it asks nobody. From `ep2` its tools
 are narrow, but `run_tests` still runs code the agent wrote, and that code is not checked
-against the policy. The container limits what it
-can touch to this folder. It does not limit the network, and the agent inside can read the
-API key it was given. Later episodes deal with both.
+against the policy. Up to `ep2` the container limits what
+it can touch to this folder, but it does not limit the network, and code inside can read the
+API key. From `ep3` the box has no secret, no key and no internet. What is left: code in the
+box can still call the model through the gate, on your bill. Episode 4 deals with that.
 
 ## Follow along
 
