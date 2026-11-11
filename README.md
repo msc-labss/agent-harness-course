@@ -42,7 +42,7 @@ Each episode has a tag: the repository as it is at the **end** of that episode.
 
 | Episode | What happens | Tag |
 |---|---|---|
-| 1 | What an agent harness is: the loop in 79 lines | `ep1` |
+| 1 | [What is an agent harness? A coding agent in 79 lines](https://youtu.be/0vBuKF1SVsk) | `ep1` |
 | 2 | Lock down what the agent may do | coming |
 | 3 | Put it in a box: container and network | coming |
 | 4 | Budgets and a stop switch | coming |
