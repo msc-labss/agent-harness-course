@@ -55,7 +55,7 @@ Each episode has a tag: the repository as it is at the **end** of that episode.
 |---|---|---|
 | 1 | [What is an agent harness? A coding agent in 79 lines](https://youtu.be/0vBuKF1SVsk) | `ep1` |
 | 2 | [Lock down a coding agent: narrow tools, not a shell](https://youtu.be/SGwmQtdegW4) | `ep2` |
-| 3 | Put it in a box: container and network | coming |
+| 3 | [Put a coding agent in a box: no secret, no key, no internet](https://youtu.be/vqbAGWRW6Nk) | `ep3` |
 | 4 | Budgets and a stop switch | coming |
 | 5 | An approval gate | coming |
 | 6 | Runs that survive the night | coming |
