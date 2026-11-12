@@ -12,6 +12,7 @@ const MAX_TURNS = 20;
 const GATE = process.env.GATE_URL ?? 'http://gate:8080';
 const policy = JSON.parse(readFileSync('policy.json', 'utf8'));
 const NOTES = 'notes/progress.md';
+const IDEAS = 'notes/ideas.md';
 
 const path = { type: 'string', description: 'A path inside the project folder' };
 const tool = (name, description, properties = {}) => ({
@@ -80,9 +81,10 @@ async function callModel(messages) {
       fallbacks: 'default',
       system: 'You are a coding agent working in a project folder. Use the tools to read, '
         + 'edit and test files. A refused tool call is final: do not try a way around it. '
-        + `You remember nothing between runs. ${NOTES} is your memory: when it lists tasks, `
-        + 'do only the first unchecked one, run the tests, then tick it in the file, add '
-        + 'under Lessons what the next run must know, and stop.',
+        + `You remember nothing between runs. ${NOTES} is your memory. Do only the task `
+        + 'you are given, run the tests, add under Lessons what the next run must know, '
+        + `and stop. Other work you notice, and questions only a person can answer, go in `
+        + `${IDEAS}, one line each: do not do that work.`,
       tools,
       messages,
     }),

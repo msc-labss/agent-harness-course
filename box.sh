@@ -6,7 +6,7 @@
 #        ./apply.sh <hash>        (apply the proposal you reviewed)
 #        ./box.sh --test          (npm test in the same box, no agent)
 #        ./box.sh --continue "…"  (keep the copy from the run before; night.sh uses it)
-#        ./box.sh --check         (npm test on the agent's copy, no agent)
+#        ./box.sh --check [test]  (npm test on the agent's copy, no agent)
 # Stop a run from another terminal: touch control/STOP
 set -e
 lock="--rm --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp"
@@ -15,7 +15,7 @@ lock="$lock --user $(id -u):$(id -g) -e HOME=/tmp"
 if [ "$1" = "--test" ]; then
   work="$PWD"; mode=":ro"; set -- npm test
 elif [ "$1" = "--check" ]; then
-  work="$PWD/proposal/b"; mode=":ro"; set -- npm test
+  shift; work="$PWD/proposal/b"; mode=":ro"; set -- npm test -- "$@"
 else
   # Two copies: a = the project as it is now, b = where the agent works.
   if [ "$1" = "--continue" ]; then shift; else rm -rf proposal; fi
@@ -30,8 +30,9 @@ docker network create --internal agent-box >/dev/null
 trap 'docker rm -f gate >/dev/null 2>&1; docker network rm agent-box >/dev/null' EXIT
 
 # The gate holds the key, the budget and the ledger. None of them is in the agent's box.
+# From ep7 night.sh names the task (TASK) and its kill line (KILL_AT) for the gate.
 mkdir -p control
-docker run -d $lock --name gate -e ANTHROPIC_API_KEY \
+docker run -d $lock --name gate -e ANTHROPIC_API_KEY -e TASK -e KILL_AT \
   -v "$PWD/gate.mjs":/gate.mjs:ro -v "$PWD/budget.json":/budget.json:ro \
   -v "$PWD/control":/control node:22-slim node /gate.mjs >/dev/null
 docker network connect agent-box gate

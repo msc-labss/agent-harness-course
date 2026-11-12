@@ -1,7 +1,7 @@
 # Agent harness course: the companion repository
 
 The code of the free agent harness course on the
-[MSC Labs YouTube channel](https://www.youtube.com/@msclabs): six short episodes on running
+[MSC Labs YouTube channel](https://www.youtube.com/@msclabs): seven short episodes on running
 coding agents with nobody watching, safely.
 
 An agent is a model plus a harness. The harness is everything around the model: it gives the
@@ -19,6 +19,8 @@ it alone.
 - `src/slugify.js` and `test/`: a tiny project with a bug. `npm test` shows 1 test passing
   and 2 failing. It is the agent's job to fix it. From `ep6` there are two more test files,
   for code that does not exist yet (`truncate`, `titleCase`): three tasks for three runs.
+  From `ep7` there is a fourth, `test/round.test.js`, whose two tests want two different
+  answers for `round(2.5)`: a task no code can finish.
 - `box.sh`: runs the agent inside a Docker container. Up to `ep2` the container sees this
   whole folder, holds the API key and has open internet. From `ep3` it mounts only the files
   the agent needs (most of them read-only), holds no key, and sits on a network with no way
@@ -30,14 +32,26 @@ it alone.
   Every apply is written to `control/approvals.log`.
 - `notes/progress.md` (from `ep6`): the agent's memory between runs: a task list and lessons.
   The harness puts it in front of the model at the start of every run; the agent ticks one
-  task per run and adds what the next run must know.
+  task per run and adds what the next run must know. From `ep7` the task list is gone from
+  it: the agent's box no longer holds the list of work, only the lessons.
+- `notes/ideas.md` (from `ep7`): where the agent writes work it noticed but was not given,
+  and questions only a person can answer. Nothing in it runs until you put it in `work.json`.
+- `work.json` (from `ep7`): the open tasks, at most `slots` of them, each with a kill line in
+  tokens. You edit it; the agent's box does not contain it.
+- `work.mjs` (from `ep7`): plain code `night.sh` runs on your machine: the next open task, the
+  tokens a task has spent (from the gate's ledger), and closing a task as `done` or `killed`
+  in `control/work.log`. A closed task never opens again by itself. With more open tasks than
+  slots it refuses, and nothing runs.
 - `night.sh` (from `ep6`): runs the agent again and again, each run fresh, until the tests pass
   in the agent's copy. The loop runs the tests itself; it does not take the agent's word. Run
   it again after it stopped and it picks up where it was. In the morning: `./apply.sh <hash>`.
+  From `ep7` it works through the open tasks of `work.json`, one at a time: a task closes when
+  its own test passes, or at its kill line, and the loop goes on to the next one.
 - `gate.mjs` (from `ep3`): the only way out of the box. It holds the API key and forwards one
   request, `POST /v1/messages`, to the Claude API. Everything else gets a 403. From `ep4` it
   also keeps the bill: it counts requests and tokens, refuses when a budget is spent, writes
-  every request to `control/ledger.jsonl`, and refuses while `control/STOP` exists.
+  every request to `control/ledger.jsonl`, and refuses while `control/STOP` exists. From `ep7`
+  every ledger row names its task, and the gate refuses once a task has spent its kill line.
 - `budget.json` (from `ep4`): the most requests and tokens one run may use, and the most
   tokens a day. The gate reads it; the agent's box does not contain it.
 
@@ -69,6 +83,10 @@ apply it. The hash proves the proposal is the one you read, not that it is good.
 From `ep6` the folder `notes/` is the one place in the project the agent writes directly.
 If you throw a proposal away, reset `notes/progress.md` too (`git checkout notes`), or the
 notes will say more is done than is.
+From `ep7` a kill line, like the budget, is checked before each request, so a task can pass
+it by one request. A killed task's work stays in the agent's copy and in the proposal: read
+it before you apply. Killing a task does not tell you why it failed; the agent's lessons and
+`notes/ideas.md` might. To open a closed task again, delete its line from `control/work.log`.
 
 ## Follow along
 

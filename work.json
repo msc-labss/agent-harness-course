@@ -1,0 +1,8 @@
+{
+  "slots": 3,
+  "open": [
+    { "test": "test/slugify.test.js", "killAt": 15000 },
+    { "test": "test/round.test.js", "killAt": 15000 },
+    { "test": "test/truncate.test.js", "killAt": 15000 }
+  ]
+}
