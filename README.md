@@ -17,7 +17,8 @@ it alone.
   checks every path against `policy.json` before it touches a file.
 - `policy.json` (from `ep2`): the files the agent may not read and may not write.
 - `src/slugify.js` and `test/`: a tiny project with a bug. `npm test` shows 1 test passing
-  and 2 failing. It is the agent's job to fix it.
+  and 2 failing. It is the agent's job to fix it. From `ep6` there are two more test files,
+  for code that does not exist yet (`truncate`, `titleCase`): three tasks for three runs.
 - `box.sh`: runs the agent inside a Docker container. Up to `ep2` the container sees this
   whole folder, holds the API key and has open internet. From `ep3` it mounts only the files
   the agent needs (most of them read-only), holds no key, and sits on a network with no way
@@ -27,6 +28,12 @@ it alone.
 - `apply.sh` (from `ep5`): applies the proposal, but only if you pass the hash of the proposal
   you read: `./apply.sh <hash>`. If the proposal changed since, or the project did, it refuses.
   Every apply is written to `control/approvals.log`.
+- `notes/progress.md` (from `ep6`): the agent's memory between runs: a task list and lessons.
+  The harness puts it in front of the model at the start of every run; the agent ticks one
+  task per run and adds what the next run must know.
+- `night.sh` (from `ep6`): runs the agent again and again, each run fresh, until the tests pass
+  in the agent's copy. The loop runs the tests itself; it does not take the agent's word. Run
+  it again after it stopped and it picks up where it was. In the morning: `./apply.sh <hash>`.
 - `gate.mjs` (from `ep3`): the only way out of the box. It holds the API key and forwards one
   request, `POST /v1/messages`, to the Claude API. Everything else gets a 403. From `ep4` it
   also keeps the bill: it counts requests and tokens, refuses when a budget is spent, writes
@@ -59,6 +66,9 @@ the budget in `budget.json`, and `touch control/STOP` from another terminal stop
 next request. The budget is checked before each request, so a run can pass it by one request.
 From `ep5` the agent cannot change the project at all: read `proposal/change.patch` before you
 apply it. The hash proves the proposal is the one you read, not that it is good.
+From `ep6` the folder `notes/` is the one place in the project the agent writes directly.
+If you throw a proposal away, reset `notes/progress.md` too (`git checkout notes`), or the
+notes will say more is done than is.
 
 ## Follow along
 
@@ -71,7 +81,7 @@ Each episode has a tag: the repository as it is at the **end** of that episode.
 | 3 | [Put a coding agent in a box: no secret, no key, no internet](https://youtu.be/vqbAGWRW6Nk) | `ep3` |
 | 4 | [Give a coding agent a budget and a stop switch](https://youtu.be/0ijkzB06kDQ) | `ep4` |
 | 5 | [An approval gate for a coding agent: it proposes, you approve](https://youtu.be/Row9BKa5U8g) | `ep5` |
-| 6 | Runs that survive the night | coming |
+| 6 | Runs that survive the night | `ep6` |
 
 ## Notes
 

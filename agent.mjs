@@ -4,13 +4,14 @@
 // and the gate may refuse: a spent budget or a stop file ends the run.
 // Usage: ANTHROPIC_API_KEY=... ./box.sh "make the tests pass"
 import { execSync } from 'node:child_process';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 
 const MODEL = 'claude-opus-5-5';
 const MAX_TURNS = 20;
 const GATE = process.env.GATE_URL ?? 'http://gate:8080';
 const policy = JSON.parse(readFileSync('policy.json', 'utf8'));
+const NOTES = 'notes/progress.md';
 
 const path = { type: 'string', description: 'A path inside the project folder' };
 const tool = (name, description, properties = {}) => ({
@@ -78,7 +79,10 @@ async function callModel(messages) {
       max_tokens: 16000,
       fallbacks: 'default',
       system: 'You are a coding agent working in a project folder. Use the tools to read, '
-        + 'edit and test files. A refused tool call is final: do not try a way around it.',
+        + 'edit and test files. A refused tool call is final: do not try a way around it. '
+        + `You remember nothing between runs. ${NOTES} is your memory: when it lists tasks, `
+        + 'do only the first unchecked one, run the tests, then tick it in the file, add '
+        + 'under Lessons what the next run must know, and stop.',
       tools,
       messages,
     }),
@@ -88,7 +92,11 @@ async function callModel(messages) {
   return response.json();
 }
 
-const messages = [{ role: 'user', content: process.argv[2] ?? 'make the tests pass' }];
+// A run starts from zero. The harness, not the model, puts the notes in front of it.
+const task = process.argv[2] ?? 'make the tests pass';
+const notes = existsSync(NOTES) ? readFileSync(NOTES, 'utf8') : '(no notes yet)';
+const first = `${task}\n\nNotes from earlier runs (${NOTES}):\n${notes}`;
+const messages = [{ role: 'user', content: first }];
 
 for (let turn = 1; turn <= MAX_TURNS; turn += 1) {
   const reply = await callModel(messages);
