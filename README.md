@@ -100,6 +100,7 @@ Each episode has a tag: the repository as it is at the **end** of that episode.
 | 4 | [Give a coding agent a budget and a stop switch](https://youtu.be/0ijkzB06kDQ) | `ep4` |
 | 5 | [An approval gate for a coding agent: it proposes, you approve](https://youtu.be/Row9BKa5U8g) | `ep5` |
 | 6 | [Coding agent runs that survive the night: notes, a loop, a check](https://youtu.be/ryWDiVnqFTI) | `ep6` |
+| 7 | [A kill line for every task: stop a coding agent burning the night](https://youtu.be/wXj2KAkd-9s) | `ep7` |
 
 ## Notes
 
