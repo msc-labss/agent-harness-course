@@ -1,0 +1,5 @@
+{
+  "runRequests": 10,
+  "runTokens": 40000,
+  "dayTokens": 200000
+}

@@ -1,6 +1,7 @@
 // An agent harness with a lock on it: four narrow tools instead of a shell,
 // and a policy that is checked before any of them touches a file.
-// It holds no API key: every request goes through the gate (gate.mjs).
+// It holds no API key: every request goes through the gate (gate.mjs),
+// and the gate may refuse: a spent budget or a stop file ends the run.
 // Usage: ANTHROPIC_API_KEY=... ./box.sh "make the tests pass"
 import { execSync } from 'node:child_process';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -82,6 +83,7 @@ async function callModel(messages) {
       messages,
     }),
   });
+  if (response.status === 403) return { refused: await response.text() };
   if (!response.ok) throw new Error(`API ${response.status}: ${await response.text()}`);
   return response.json();
 }
@@ -90,6 +92,11 @@ const messages = [{ role: 'user', content: process.argv[2] ?? 'make the tests pa
 
 for (let turn = 1; turn <= MAX_TURNS; turn += 1) {
   const reply = await callModel(messages);
+  if (reply.refused) {
+    console.log(`\nstopped by the gate at request ${turn}: ${reply.refused}`);
+    process.exitCode = 1;
+    break;
+  }
   messages.push({ role: 'assistant', content: reply.content });
   for (const block of reply.content) if (block.type === 'text') console.log(`\n${block.text}`);
   if (reply.stop_reason !== 'tool_use') {

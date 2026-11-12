@@ -23,7 +23,11 @@ it alone.
   the agent needs (most of them read-only), holds no key, and sits on a network with no way
   out except the gate. `./box.sh --test` runs `npm test` in the same box, without the agent.
 - `gate.mjs` (from `ep3`): the only way out of the box. It holds the API key and forwards one
-  request, `POST /v1/messages`, to the Claude API. Everything else gets a 403.
+  request, `POST /v1/messages`, to the Claude API. Everything else gets a 403. From `ep4` it
+  also keeps the bill: it counts requests and tokens, refuses when a budget is spent, writes
+  every request to `control/ledger.jsonl`, and refuses while `control/STOP` exists.
+- `budget.json` (from `ep4`): the most requests and tokens one run may use, and the most
+  tokens a day. The gate reads it; the agent's box does not contain it.
 
 ## Run it
 
@@ -45,7 +49,9 @@ are narrow, but `run_tests` still runs code the agent wrote, and that code is no
 against the policy. Up to `ep2` the container limits what
 it can touch to this folder, but it does not limit the network, and code inside can read the
 API key. From `ep3` the box has no secret, no key and no internet. What is left: code in the
-box can still call the model through the gate, on your bill. Episode 4 deals with that.
+box can still call the model through the gate, on your bill. From `ep4` the gate stops at
+the budget in `budget.json`, and `touch control/STOP` from another terminal stops a run at its
+next request. The budget is checked before each request, so a run can pass it by one request.
 
 ## Follow along
 

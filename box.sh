@@ -1,6 +1,7 @@
 #!/bin/sh
 # Runs the agent in a box with no secret, no API key and no internet.
-# One gate leads out, to the model API only.
+# One gate leads out, to the model API only, and it keeps a budget (budget.json).
+# Stop a run from another terminal: touch control/STOP
 # Usage: ANTHROPIC_API_KEY=... ./box.sh "make the tests pass"
 #        ./box.sh --test          (npm test in the same box, no agent)
 set -e
@@ -11,9 +12,11 @@ lock="$lock --user $(id -u):$(id -g) -e HOME=/tmp"
 docker network create --internal agent-box >/dev/null
 trap 'docker rm -f gate >/dev/null 2>&1; docker network rm agent-box >/dev/null' EXIT
 
-# The gate holds the key and is the only container with a way out.
+# The gate holds the key, the budget and the ledger. None of them is in the agent's box.
+mkdir -p control
 docker run -d $lock --name gate -e ANTHROPIC_API_KEY \
-  -v "$PWD/gate.mjs":/gate.mjs:ro node:22-slim node /gate.mjs >/dev/null
+  -v "$PWD/gate.mjs":/gate.mjs:ro -v "$PWD/budget.json":/budget.json:ro \
+  -v "$PWD/control":/control node:22-slim node /gate.mjs >/dev/null
 docker network connect agent-box gate
 
 # The agent: no key, no internet, and only the files it needs.
