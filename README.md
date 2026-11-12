@@ -22,6 +22,11 @@ it alone.
   whole folder, holds the API key and has open internet. From `ep3` it mounts only the files
   the agent needs (most of them read-only), holds no key, and sits on a network with no way
   out except the gate. `./box.sh --test` runs `npm test` in the same box, without the agent.
+  From `ep5` the agent works on a copy of `src` and `test`, and the run ends with a proposal,
+  `proposal/change.patch`, and its hash. Nothing in the project changes.
+- `apply.sh` (from `ep5`): applies the proposal, but only if you pass the hash of the proposal
+  you read: `./apply.sh <hash>`. If the proposal changed since, or the project did, it refuses.
+  Every apply is written to `control/approvals.log`.
 - `gate.mjs` (from `ep3`): the only way out of the box. It holds the API key and forwards one
   request, `POST /v1/messages`, to the Claude API. Everything else gets a 403. From `ep4` it
   also keeps the bill: it counts requests and tokens, refuses when a budget is spent, writes
@@ -52,6 +57,8 @@ API key. From `ep3` the box has no secret, no key and no internet. What is left:
 box can still call the model through the gate, on your bill. From `ep4` the gate stops at
 the budget in `budget.json`, and `touch control/STOP` from another terminal stops a run at its
 next request. The budget is checked before each request, so a run can pass it by one request.
+From `ep5` the agent cannot change the project at all: read `proposal/change.patch` before you
+apply it. The hash proves the proposal is the one you read, not that it is good.
 
 ## Follow along
 
